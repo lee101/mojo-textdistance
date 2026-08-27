@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import Counter
-from difflib import SequenceMatcher
 from itertools import islice, repeat, zip_longest
 from math import log, prod
 from typing import Any, Callable, Sequence
@@ -189,6 +188,35 @@ def _jaro_python(
         len(first) + len(second) - prefix * 2 + 2
     )
     return weight + (1.0 - weight) * adjustment
+
+
+def _lcsstr_short(first: str | bytes, second: str | bytes) -> str | bytes:
+    if type(first) is not type(second):
+        return first[:0]
+    for size in range(min(len(first), len(second)), 0, -1):
+        for start in range(len(first) - size + 1):
+            candidate = first[start : start + size]
+            if candidate in second:
+                return candidate
+    return first[:0]
+
+
+def _jaccard_short(first: Sequence, second: Sequence, qval: int, as_set: bool):
+    left = Counter(_prepare(first, qval))
+    right = Counter(_prepare(second, qval))
+    if as_set:
+        intersection = len(left.keys() & right.keys())
+        return intersection / (len(left) + len(right) - intersection)
+    intersection = 0
+    union = 0
+    for key, left_count in left.items():
+        right_count = right.get(key, 0)
+        intersection += min(left_count, right_count)
+        union += max(left_count, right_count)
+    for key, right_count in right.items():
+        if key not in left:
+            union += right_count
+    return intersection / union
 
 
 class Hamming(Base):
@@ -648,8 +676,7 @@ class LCSStr(BaseSimilarity):
             and self.qval == 1
             and all(isinstance(sequence, (str, bytes)) for sequence in prepared)
         ):
-            match = SequenceMatcher(a=prepared[0], b=prepared[1]).find_longest_match()
-            return sequences[0][match.a : match.a + match.size]
+            return _lcsstr_short(prepared[0], prepared[1])
         first_index = 0 if len(prepared[0]) <= len(prepared[1]) else 1
         first = prepared[first_index]
         second = prepared[1 - first_index]
@@ -906,13 +933,8 @@ class Jaccard(_TokenSimilarity):
                 and not isinstance(sequences[1], Counter)
                 and len(sequences[0]) + len(sequences[1]) < 256
             ):
-                left = Counter(_prepare(sequences[0], self.qval))
-                right = Counter(_prepare(sequences[1], self.qval))
-                if self.as_set:
-                    left = Counter({key: 1 for key in left})
-                    right = Counter({key: 1 for key in right})
-                return sum((left & right).values()) / sum(
-                    (left | right).values()
+                return _jaccard_short(
+                    sequences[0], sequences[1], self.qval, self.as_set
                 )
             intersection, union, _, _, _ = _counter_stats(
                 sequences[0], sequences[1], self.qval, self.as_set

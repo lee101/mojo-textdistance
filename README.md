@@ -75,7 +75,7 @@ pixi run bench
 
 Measured with `pixi run bench` on an Intel Xeon E5-2697 v4 at 2.30 GHz,
 Linux x86-64, Python 3.13.14, Mojo
-`1.0.0b3.dev2026072406`, and upstream `textdistance` 4.6.2. Each result is the
+`1.1.0.dev2026081105`, and upstream `textdistance` 4.6.2. Each result is the
 best of three runs after library warm-up. Upstream objects use
 `external=False`, so this compares these kernels with upstream's own
 implementations rather than an optionally installed third-party accelerator.
@@ -84,13 +84,13 @@ timing.
 
 | Metric | Input | Mojo | textdistance | Speedup |
 |---|---:|---:|---:|---:|
-| Hamming | 2,000,000 chars | 8.62 ms | 598.39 ms | 69.43x |
-| Levenshtein | 2,000 x 2,000 chars | 8.76 ms | 3127.80 ms | 356.95x |
-| Damerau-Levenshtein | 900 x 900 chars | 3.01 ms | 1763.39 ms | 585.17x |
-| Jaro-Winkler | 10,000 chars | 22.30 ms | 1934.92 ms | 86.76x |
-| LCS sequence | 1,100 x 1,100 chars | 3.69 ms | 1628.71 ms | 440.93x |
-| Needleman-Wunsch | 1,100 x 1,100 chars | 2.69 ms | 1636.65 ms | 608.87x |
-| Jaccard | 1,000,000 chars | 4.51 ms | 104.88 ms | 23.28x |
+| Hamming | 2,000,000 chars | 3.25 ms | 577.63 ms | 177.60x |
+| Levenshtein | 2,000 x 2,000 chars | 6.90 ms | 2492.74 ms | 361.33x |
+| Damerau-Levenshtein | 900 x 900 chars | 2.99 ms | 1284.45 ms | 429.07x |
+| Jaro-Winkler | 10,000 chars | 20.33 ms | 1373.79 ms | 67.58x |
+| LCS sequence | 1,100 x 1,100 chars | 3.43 ms | 1133.42 ms | 330.62x |
+| Needleman-Wunsch | 1,100 x 1,100 chars | 2.54 ms | 1412.27 ms | 556.73x |
+| Jaccard | 1,000,000 chars | 2.20 ms | 102.05 ms | 46.40x |
 
 These numbers describe this machine and workload, not a universal performance
 guarantee. Input conversion and scratch allocation are included in the Mojo
@@ -118,6 +118,11 @@ then reconstructs upstream-compatible strings, lists, and metric objects.
 Prefix and postfix scans use native-width SIMD with scalar tails. Token
 histogram initialization and reductions are also SIMD-vectorized, and sparse
 Unicode inputs are compacted before allocating histogram scratch.
+
+Short Jaccard calls compute intersection and union totals without allocating
+temporary result counters. Short LCS substring calls use descending substring
+search, preserving the upstream earliest-match tie break without constructing a
+`SequenceMatcher`.
 
 No GPU or threaded path is included. The linear scans and histogram kernels are
 memory-bound, while the dynamic-programming and greedy matching kernels have

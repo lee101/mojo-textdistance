@@ -47,6 +47,17 @@ def test_lcsstr_short_dispatch_boundary(upstream):
         assert ours(left, right) == theirs(left, right)
 
 
+@pytest.mark.parametrize("sequence_type", [str, bytes])
+def test_lcsstr_short_tie_breaking_and_no_match(upstream, sequence_type):
+    ours = mojo.LCSStr(external=False)
+    theirs = upstream.LCSStr(external=False)
+    for left, right in [("ab12cd", "cd34ab"), ("abc", "XYZ")]:
+        left = sequence_type(left, "ascii") if sequence_type is bytes else left
+        right = sequence_type(right, "ascii") if sequence_type is bytes else right
+        assert ours(left, right) == theirs(left, right)
+    assert ours("abc", b"abc") == theirs("abc", b"abc")
+
+
 def test_lcsseq_custom_comparator(upstream):
     comparator = lambda left, right: left.lower() == right.lower()
     ours = mojo.LCSSeq(test_func=comparator, external=False)
@@ -121,6 +132,16 @@ def test_jaccard_short_dispatch_boundary(upstream, as_set):
         left = ("abc" * 100)[:size]
         right = ("abd" * 100)[:size]
         assert ours(left, right) == pytest.approx(theirs(left, right))
+
+
+@pytest.mark.parametrize("qval", [1, 2])
+@pytest.mark.parametrize("as_set", [False, True])
+def test_jaccard_short_repeated_tokens(upstream, qval, as_set):
+    ours = mojo.Jaccard(qval=qval, as_set=as_set, external=False)
+    theirs = upstream.Jaccard(qval=qval, as_set=as_set, external=False)
+    left = "aabbbbbcc"
+    right = "aaaabbcdd"
+    assert ours(left, right) == pytest.approx(theirs(left, right))
 
 
 def test_counter_and_multi_sequence_token_parity(upstream):
