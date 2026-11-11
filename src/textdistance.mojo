@@ -292,8 +292,8 @@ def mtd_prefix(a_addr: Int, n: Int, b_addr: Int, m: Int) abi("C") -> Int:
     var length = 0
     comptime W = simd_width_of[DType.uint32]()
     while length + W <= limit:
-        if not a.load[width=W](length).eq(
-            b.load[width=W](length)
+        if not a.unsafe_load[width=W](length).eq(
+            b.unsafe_load[width=W](length)
         ).reduce_and():
             break
         length += W
@@ -314,8 +314,8 @@ def mtd_postfix(a_addr: Int, n: Int, b_addr: Int, m: Int) abi("C") -> Int:
     while length + W <= limit:
         var a_start = n - length - W
         var b_start = m - length - W
-        if not a.load[width=W](a_start).eq(
-            b.load[width=W](b_start)
+        if not a.unsafe_load[width=W](a_start).eq(
+            b.unsafe_load[width=W](b_start)
         ).reduce_and():
             break
         length += W
@@ -365,8 +365,8 @@ def mtd_token_stats(
     var ones = SIMD[DType.int64, W](1)
     k = 0
     while k + W <= vocab:
-        var ca = counts_a.load[width=W](k)
-        var cb = counts_b.load[width=W](k)
+        var ca = counts_a.unsafe_load[width=W](k)
+        var cb = counts_b.unsafe_load[width=W](k)
         if as_set != 0:
             ca = ca.gt(zeros).select(ones, zeros)
             cb = cb.gt(zeros).select(ones, zeros)
